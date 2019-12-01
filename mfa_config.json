@@ -1,0 +1,6 @@
+{
+    "ServiceProviders":[{
+        "ServiceProviderName": "travelocity.com",
+        "MFARole":"role1,role2"
+    }]
+}
