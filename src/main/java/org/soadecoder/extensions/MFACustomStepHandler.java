@@ -8,7 +8,6 @@ import org.wso2.carbon.identity.application.authentication.framework.config.mode
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.step.impl.DefaultStepHandler;
-import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -29,11 +28,18 @@ public class MFACustomStepHandler extends DefaultStepHandler {
         StepConfig stepConfig = context.getSequenceConfig().getStepMap().get(currentStep);
         String spName = context.getServiceProviderName();
 
+        if (log.isDebugEnabled()) {
+            log.debug("Current Step: " + currentStep);
+            log.debug("Service Provider name: " + spName);
+        }
+
         if (currentStep == 1) {
                 super.handle(request, response, context);
-                if (stepConfig.isCompleted() && context.getSubject() != null && spMFARoleMap != null
-                        && spMFARoleMap.containsKey(spName)) {
+                if (stepConfig.isCompleted() && spMFARoleMap != null && spMFARoleMap.containsKey(spName)) {
                     try {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Executing MFA custom step handler.");
+                        }
                         boolean roleCheck = false;
                         String username = context.getSequenceConfig().getStepMap().get(currentStep)
                                 .getAuthenticatedUser().getUserName();
@@ -47,6 +53,9 @@ public class MFACustomStepHandler extends DefaultStepHandler {
                             if (!role.isEmpty()) {
                                 roleCheck = ((AbstractUserStoreManager) userStoreManager).isUserInRole(username, role);
                                 if (roleCheck) {
+                                    if (log.isDebugEnabled()) {
+                                        log.debug("User: " + username + " passed role check with role: " + role);
+                                    }
                                     break;
                                 }
                             }
@@ -57,13 +66,11 @@ public class MFACustomStepHandler extends DefaultStepHandler {
                                 context.getSequenceConfig().getStepMap().remove(i);
                             }
                             if (log.isDebugEnabled()) {
-                                log.debug("Skipping other steps");
+                                log.debug("Skipping other steps for user " + username);
                             }
                         }
-                    } catch (UserStoreException e) {
-                        log.error(e);
-                    } catch (org.wso2.carbon.user.api.UserStoreException e) {
-                        log.error(e);
+                    } catch (Exception e) {
+                        log.error("Error occurred during executing MFA custom step handler.", e);
                     }
                 }
         } else {
